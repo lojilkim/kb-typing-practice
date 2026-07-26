@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  password      String
+  studentId     String    @unique
+  profilePicture String?
+  xp            Int       @default(0)
+  level         Int       @default(1)
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
+  lastPracticeDate String?
+  totalPracticeTime Int   @default(0)
+  totalWordsTyped Int     @default(0)
+  bestWpm       Int       @default(0)
+  bestAccuracy  Float     @default(0)
+  theme         String    @default("dark")
+  fontSize      Int       @default(16)
+  volume        Int       @default(70)
+  musicEnabled  Boolean   @default(true)
+  postureReminders Boolean @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  practiceSessions PracticeSession[]
+  userSongs        UserSong[]
+  userAchievements UserAchievement[]
+  userChallenges   UserChallenge[]
+  userLessons      UserLesson[]
+  errorLogs        ErrorLog[]
+  fingerStats      FingerStat[]
+  practiceCalendar PracticeCalendar[]
+}
+
+model PracticeSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wpm         Int
+  accuracy    Float
+  errors      Int
+  duration    Int
+  wordsTyped  Int
+  songId      String?
+  song        Song?    @relation(fields: [songId], references: [id], onDelete: Cascade)
+  lessonId    String?
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  // Enhanced tracking for research
+  musicEnabled Boolean @default(true)
+  postureRemindersAcknowledged Int @default(0)
+  homeRowAccuracy Float?
+  topRowAccuracy Float?
+  bottomRowAccuracy Float?
+  numberRowAccuracy Float?
+  leftHandAccuracy Float?
+  rightHandAccuracy Float?
+  correctKeystrokes Int @default(0)
+  incorrectKeystrokes Int @default(0)
+  averageResponseTime Float?
+  
+  createdAt   DateTime @default(now())
+}
+
+model Song {
+  id          String   @id @default(cuid())
+  title       String
+  artist      String
+  lyrics      String
+  difficulty  String   @default("beginner")
+  unlockLevel Int      @default(1)
+  genre       String?
+  audioUrl    String?
+  createdAt   DateTime @default(now())
+
+  userSongs     UserSong[]
+  practiceSessions PracticeSession[]
+}
+
+model UserSong {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songId      String
+  song        Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  bestWpm     Int      @default(0)
+  bestAccuracy Float   @default(0)
+  completed   Boolean  @default(false)
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, songId])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  icon        String
+  xpReward    Int      @default(50)
+  condition   String
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  earnedAt      DateTime @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+model DailyChallenge {
+  id          String   @id @default(cuid())
+  type        String
+  target      Int
+  description String
+  xpReward    Int      @default(100)
+  date        String   @unique
+  createdAt   DateTime @default(now())
+
+  userChallenges UserChallenge[]
+}
+
+model UserChallenge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  progress    Int      @default(0)
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, challengeId])
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  difficulty  String
+  content     String
+  unlockLevel Int      @default(1)
+  order       Int      @default(0)
+
+  userLessons      UserLesson[]
+  practiceSessions PracticeSession[]
+}
+
+model UserLesson {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  bestWpm     Int      @default(0)
+  bestAccuracy Float   @default(0)
+  completed   Boolean  @default(false)
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model ErrorLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expectedKey String
+  typedKey    String
+  finger      String?
+  row         String?
+  hand        String?
+  sessionId   String?
+  createdAt   DateTime @default(now())
+}
+
+model FingerStat {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  finger      String
+  totalKeystrokes Int @default(0)
+  correctKeystrokes Int @default(0)
+  accuracy    Float    @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, finger])
+}
+
+model PracticeCalendar {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        String
+  practiceMinutes Int @default(0)
+  sessionsCount Int @default(0)
+  wordsTyped  Int @default(0)
+  averageWpm  Float @default(0)
+  averageAccuracy Float @default(0)
+  
+  @@unique([userId, date])
+}
