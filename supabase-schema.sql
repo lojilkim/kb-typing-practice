@@ -376,6 +376,23 @@ CREATE TRIGGER protect_assessment_result
   BEFORE UPDATE OR DELETE ON public.assessment_results
   FOR EACH ROW EXECUTE FUNCTION public.prevent_assessment_change();
 
+-- Username recovery checks the verified authentication email.
+CREATE OR REPLACE FUNCTION public.recover_username(account_email TEXT)
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, auth
+AS $$
+  SELECT u.username
+  FROM public.users u
+  JOIN auth.users a ON a.id = u.id
+  WHERE lower(a.email) = lower(account_email)
+  LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION public.recover_username(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.recover_username(TEXT) TO anon, authenticated;
+
 -- Seed data: Songs
 INSERT INTO public.songs (title, artist, lyrics, difficulty, unlock_level, genre) VALUES
 ('Twinkle Twinkle Little Star', 'Traditional', 'Twinkle twinkle little star, how I wonder what you are. Up above the world so high, like a diamond in the sky. Twinkle twinkle little star, how I wonder what you are.', 'beginner', 1, 'Children'),

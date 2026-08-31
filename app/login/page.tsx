@@ -88,6 +88,9 @@ export default function LoginPage() {
           <Link href="/forgot-password" className="block text-sm mb-3" style={{ color: "var(--primary)" }}>
             Forgot Password?
           </Link>
+          <Link href="/forgot-username" className="block text-sm mb-3" style={{ color: "var(--primary)" }}>
+            Forgot Email or Username?
+          </Link>
           <p style={{ color: "var(--text-muted)" }}>
             Don&apos;t have an account?{" "}
             <Link href="/register" className="font-semibold" style={{ color: "var(--primary)" }}>
