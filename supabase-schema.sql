@@ -217,7 +217,8 @@ SET search_path = public
 AS $$
 BEGIN
   IF OLD.role IS DISTINCT FROM NEW.role
-     AND COALESCE(auth.role(), '') <> 'service_role' THEN
+     AND COALESCE(auth.role(), '') <> 'service_role'
+     AND session_user NOT IN ('postgres', 'supabase_admin') THEN
     RAISE EXCEPTION 'Only service_role can change user roles';
   END IF;
   RETURN NEW;
