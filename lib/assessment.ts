@@ -19,7 +19,7 @@ export interface AssessmentStatus {
 }
 
 export const assessmentText =
-  "Good typing comes from steady practice, correct posture, and accurate finger placement. Type this passage carefully and keep a comfortable rhythm."
+  "Good typing comes from steady practice, correct posture, and accurate finger placement. In 2026, type each sentence carefully: keep a comfortable rhythm, watch the punctuation, and use the correct number row. Try to maintain 95% accuracy while typing commas, periods, colons, semicolons, apostrophes, and question marks. A focused student can improve speed from 25 WPM to 40 WPM with regular practice; small, accurate steps create lasting progress."
 
 export const localAssessmentKey = "typemaster-assessments"
 
