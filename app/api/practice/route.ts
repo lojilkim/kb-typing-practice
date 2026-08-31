@@ -163,7 +163,11 @@ export async function POST(request: Request) {
       }
     }
 
-    const newXp = user.xp + Math.floor(wpm * (accuracy / 100))
+    // Songs are longer milestone activities, so reward them generously.
+    const sessionXp = songId
+      ? Math.max(500, Math.floor(wpm * (accuracy / 100) * 5))
+      : Math.floor(wpm * (accuracy / 100))
+    const newXp = user.xp + sessionXp
     const newLevel = Math.floor(newXp / 500) + 1
     const newTotalPracticeTime = user.total_practice_time + duration
     const newTotalWordsTyped = user.total_words_typed + wordsTyped
