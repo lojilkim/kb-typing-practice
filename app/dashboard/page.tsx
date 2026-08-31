@@ -152,19 +152,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="card mb-8" style={{ borderColor: assessments.pre ? "var(--success)" : "var(--warning)" }}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold mb-1">Assessment checkpoint</h2>
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              {assessments.pre ? "Pre-test complete. Practice is unlocked." : "Take a short pre-test before starting practice."}
-            </p>
+      <div className="card mb-8">
+        <h2 className="text-xl font-bold mb-4">Assessment Progress</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-4 rounded-lg" style={{ background: "var(--secondary)", border: `1px solid ${assessments.pre ? "var(--success)" : "var(--card-border)"}` }}>
+            <div className="flex items-center justify-between mb-2"><h3 className="font-bold">Pre-test</h3><span className={`badge ${assessments.pre ? "badge-success" : "badge-primary"}`}>{assessments.pre ? "Complete" : "Available"}</span></div>
+            {assessments.pre ? <p>{assessments.pre.wpm} WPM · {assessments.pre.accuracy}% accuracy</p> : <Link href="/assessment/pre-test" className="btn-primary inline-block mt-3">Take Pre-test</Link>}
           </div>
-          <div className="flex gap-3">
-            {!assessments.pre && <Link href="/assessment/pre-test" className="btn-primary">Take pre-test</Link>}
-            {assessments.pre && !assessments.post && (stats?.level || 1) >= 2 && <Link href="/assessment/post-test" className="btn-secondary">Post-test unlocked</Link>}
-            {assessments.pre && !assessments.post && (stats?.level || 1) < 2 && <span className="badge">Reach Level 2 to unlock post-test</span>}
-            {assessments.post && <span className="badge badge-success">Both complete</span>}
+          <div className="p-4 rounded-lg" style={{ background: "var(--secondary)", border: `1px solid ${assessments.post ? "var(--success)" : "var(--card-border)"}` }}>
+            <div className="flex items-center justify-between mb-2"><h3 className="font-bold">Post-test</h3><span className={`badge ${assessments.post ? "badge-success" : ""}`}>{assessments.post ? "Complete" : (stats?.level || 1) >= 2 && assessments.pre ? "Unlocked" : "Locked"}</span></div>
+            {assessments.post ? <p>{assessments.post.wpm} WPM · {assessments.post.accuracy}% accuracy</p> : (stats?.level || 1) >= 2 && assessments.pre ? <Link href="/assessment/post-test" className="btn-secondary inline-block mt-3">Take Post-test</Link> : <p className="text-sm" style={{ color: "var(--text-muted)" }}>{!assessments.pre ? "Complete the Pre-test first." : "Reach Level 2 to unlock the Post-test."}</p>}
           </div>
         </div>
       </div>

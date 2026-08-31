@@ -10,6 +10,7 @@ import LogoutDialog from "./LogoutDialog"
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
   { href: "/assessment/pre-test", label: "Pre-test", icon: "🧪" },
+  { href: "/assessment/post-test", label: "Post-test", icon: "📋" },
   { href: "/songs", label: "Song Lyrics", icon: "🎵" },
   { href: "/lessons", label: "Typing Lessons", icon: "⌨️" },
   { href: "/guide", label: "Typing Guide", icon: "🖐️" },
