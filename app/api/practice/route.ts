@@ -27,6 +27,17 @@ export async function POST(request: Request) {
 
     const supabase = await getSupabase()
 
+    const { data: preTest } = await supabase
+      .from('assessment_results')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('kind', 'pre')
+      .maybeSingle()
+
+    if (!preTest) {
+      return NextResponse.json({ error: 'Complete the pre-test before practicing' }, { status: 403 })
+    }
+
     // Create practice session
     const { data: practiceSession } = await supabase
       .from('practice_sessions')

@@ -7,6 +7,7 @@ CREATE TABLE public.users (
   username TEXT UNIQUE NOT NULL,
   student_id TEXT UNIQUE NOT NULL,
   role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+  recovery_email TEXT,
   profile_picture TEXT,
   xp INTEGER DEFAULT 0,
   level INTEGER DEFAULT 1,
@@ -321,6 +322,60 @@ CREATE POLICY "Users can insert own practice calendar" ON public.practice_calend
 CREATE POLICY "Users can update own practice calendar" ON public.practice_calendar
   FOR UPDATE USING (auth.uid() = user_id);
 
+-- Pre-test and post-test assessment results
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$;
+
+CREATE TABLE public.assessment_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('pre', 'post')),
+  wpm INTEGER NOT NULL CHECK (wpm >= 0),
+  accuracy NUMERIC(5,2) NOT NULL CHECK (accuracy BETWEEN 0 AND 100),
+  correct_characters INTEGER NOT NULL CHECK (correct_characters >= 0),
+  incorrect_characters INTEGER NOT NULL CHECK (incorrect_characters >= 0),
+  total_characters INTEGER NOT NULL CHECK (total_characters >= 0),
+  errors INTEGER NOT NULL CHECK (errors >= 0),
+  completion_time INTEGER NOT NULL CHECK (completion_time >= 0),
+  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'abandoned')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, kind)
+);
+
+ALTER TABLE public.assessment_results ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own assessments" ON public.assessment_results
+  FOR SELECT USING (auth.uid() = user_id OR public.is_admin());
+
+CREATE POLICY "Users can insert own assessments" ON public.assessment_results
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all users" ON public.users
+  FOR SELECT USING (auth.uid() = id OR public.is_admin());
+
+CREATE OR REPLACE FUNCTION public.prevent_assessment_change()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF OLD IS DISTINCT FROM NEW THEN
+    RAISE EXCEPTION 'Completed assessment results cannot be changed';
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER protect_assessment_result
+  BEFORE UPDATE OR DELETE ON public.assessment_results
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_assessment_change();
+
 -- Seed data: Songs
 INSERT INTO public.songs (title, artist, lyrics, difficulty, unlock_level, genre) VALUES
 ('Twinkle Twinkle Little Star', 'Traditional', 'Twinkle twinkle little star, how I wonder what you are. Up above the world so high, like a diamond in the sky. Twinkle twinkle little star, how I wonder what you are.', 'beginner', 1, 'Children'),
@@ -364,12 +419,13 @@ INSERT INTO public.achievements (name, description, icon, xp_reward, condition) 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, username, student_id, role)
+  INSERT INTO public.users (id, username, student_id, role, recovery_email)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || substr(NEW.id::text, 1, 8)),
     COALESCE(NEW.raw_user_meta_data->>'student_id', 'STUDENT-' || substr(NEW.id::text, 1, 8)),
-    'user'
+    'user',
+    NEW.raw_user_meta_data->>'recovery_email'
   );
   RETURN NEW;
 END;

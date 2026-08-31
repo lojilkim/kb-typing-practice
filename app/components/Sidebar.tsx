@@ -9,6 +9,7 @@ import LogoutDialog from "./LogoutDialog"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
+  { href: "/assessment/pre-test", label: "Pre-test", icon: "🧪" },
   { href: "/songs", label: "Song Lyrics", icon: "🎵" },
   { href: "/lessons", label: "Typing Lessons", icon: "⌨️" },
   { href: "/guide", label: "Typing Guide", icon: "🖐️" },
@@ -63,6 +64,12 @@ export default function Sidebar() {
           </Link>
         ))}
       </nav>
+
+      {profile?.role === "admin" && (
+        <Link href="/admin/assessments" className={`sidebar-link ${pathname.startsWith("/admin") ? "active" : ""}`}>
+          <span className="text-xl">🛡️</span><span className="font-medium">Admin results</span>
+        </Link>
+      )}
 
       <div className="space-y-2">
         <button

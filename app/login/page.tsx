@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true)
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: `${username}@typemaster.local`,
+      email: username.includes("@") ? username : `${username}@typemaster.local`,
       password,
     })
 
@@ -52,7 +52,7 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">Username</label>
+            <label className="block text-sm font-medium mb-2">Email or username</label>
             <input
               type="text"
               value={username}
@@ -85,6 +85,9 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center">
+          <Link href="/forgot-password" className="block text-sm mb-3" style={{ color: "var(--primary)" }}>
+            Forgot Password?
+          </Link>
           <p style={{ color: "var(--text-muted)" }}>
             Don&apos;t have an account?{" "}
             <Link href="/register" className="font-semibold" style={{ color: "var(--primary)" }}>

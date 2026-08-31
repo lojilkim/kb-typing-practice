@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const router = useRouter()
   const supabase = createClient()
   const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [studentId, setStudentId] = useState("")
@@ -32,12 +33,13 @@ export default function RegisterPage() {
     setLoading(true)
 
     const { error } = await supabase.auth.signUp({
-      email: `${username}@typemaster.local`,
+      email,
       password,
       options: {
         data: {
           username,
           student_id: studentId,
+          recovery_email: email,
         },
       },
     })
@@ -48,7 +50,7 @@ export default function RegisterPage() {
     } else {
       // Auto sign in after registration
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: `${username}@typemaster.local`,
+        email,
         password,
       })
 
@@ -102,6 +104,11 @@ export default function RegisterPage() {
               placeholder="Enter your student ID"
               required
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="Enter your email" required />
           </div>
 
           <div>

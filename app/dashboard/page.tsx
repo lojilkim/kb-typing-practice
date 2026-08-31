@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "../components/SupabaseAuthProvider"
 import Link from "next/link"
+import { AssessmentStatus } from "@/lib/assessment"
 
 interface Stats {
   bestWpm: number
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
+  const [assessments, setAssessments] = useState<AssessmentStatus>({ pre: null, post: null, storage: "local" })
 
   useEffect(() => {
     if (!authLoading && !profile) {
@@ -38,13 +40,7 @@ export default function DashboardPage() {
     }
   }, [authLoading, profile, router])
 
-  useEffect(() => {
-    if (profile) {
-      fetchDashboardData()
-    }
-  }, [profile])
-
-  const fetchDashboardData = async () => {
+  async function fetchDashboardData() {
     try {
       const sessionsRes = await fetch("/api/practice")
       const sessions: Session[] = await sessionsRes.json()
@@ -55,12 +51,23 @@ export default function DashboardPage() {
         const userData = await userRes.json()
         setStats(userData)
       }
+      const assessmentRes = await fetch("/api/assessments")
+      const remoteAssessments = assessmentRes.ok ? await assessmentRes.json() : null
+       setAssessments({
+         pre: remoteAssessments?.pre || null,
+         post: remoteAssessments?.post || null,
+         storage: remoteAssessments?.storage === "database" ? "database" : "local",
+      })
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error)
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (profile) Promise.resolve().then(fetchDashboardData)
+  }, [profile])
 
   if (authLoading || loading) {
     return (
@@ -145,6 +152,34 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <div className="card mb-8" style={{ borderColor: assessments.pre ? "var(--success)" : "var(--warning)" }}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold mb-1">Assessment checkpoint</h2>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {assessments.pre ? "Pre-test complete. Practice is unlocked." : "Take a short pre-test before starting practice."}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            {!assessments.pre && <Link href="/assessment/pre-test" className="btn-primary">Take pre-test</Link>}
+            {assessments.pre && !assessments.post && (stats?.level || 1) >= 2 && <Link href="/assessment/post-test" className="btn-secondary">Post-test unlocked</Link>}
+            {assessments.pre && !assessments.post && (stats?.level || 1) < 2 && <span className="badge">Reach Level 2 to unlock post-test</span>}
+            {assessments.post && <span className="badge badge-success">Both complete</span>}
+          </div>
+        </div>
+      </div>
+
+      {assessments.pre && assessments.post && (
+        <div className="card mb-8">
+          <h2 className="text-xl font-bold mb-4">Pre-test vs Post-test</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><p className="text-sm" style={{ color: "var(--text-muted)" }}>WPM improvement</p><p className="text-2xl font-bold">{assessments.post.wpm - assessments.pre.wpm >= 0 ? "+" : ""}{assessments.post.wpm - assessments.pre.wpm}</p></div>
+            <div><p className="text-sm" style={{ color: "var(--text-muted)" }}>Accuracy improvement</p><p className="text-2xl font-bold">{(assessments.post.accuracy - assessments.pre.accuracy).toFixed(2)}%</p></div>
+            <div><p className="text-sm" style={{ color: "var(--text-muted)" }}>Errors reduced</p><p className="text-2xl font-bold">{assessments.pre.errors - assessments.post.errors}</p></div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
@@ -172,13 +207,13 @@ export default function DashboardPage() {
         <div className="card">
           <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
           <div className="space-y-3">
-            <Link href="/songs" className="btn-primary w-full text-center block">
+            <Link href="/songs" aria-disabled={!assessments.pre} className={`btn-primary w-full text-center block ${!assessments.pre ? "pointer-events-none opacity-50" : ""}`}>
               🎵 Practice Songs
             </Link>
-            <Link href="/lessons" className="btn-secondary w-full text-center block">
+            <Link href="/lessons" aria-disabled={!assessments.pre} className={`btn-secondary w-full text-center block ${!assessments.pre ? "pointer-events-none opacity-50" : ""}`}>
               ⌨️ Typing Lessons
             </Link>
-            <Link href="/challenges" className="btn-secondary w-full text-center block">
+            <Link href="/challenges" aria-disabled={!assessments.pre} className={`btn-secondary w-full text-center block ${!assessments.pre ? "pointer-events-none opacity-50" : ""}`}>
               🎯 Daily Challenge
             </Link>
           </div>
