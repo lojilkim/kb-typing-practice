@@ -6,6 +6,7 @@ CREATE TABLE public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   username TEXT UNIQUE NOT NULL,
   student_id TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   profile_picture TEXT,
   xp INTEGER DEFAULT 0,
   level INTEGER DEFAULT 1,
@@ -207,6 +208,28 @@ CREATE POLICY "Users can update own profile" ON public.users
 CREATE POLICY "Users can insert own profile" ON public.users
   FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- Users cannot promote themselves. Role changes must use the service role.
+CREATE OR REPLACE FUNCTION public.prevent_user_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF OLD.role IS DISTINCT FROM NEW.role
+     AND COALESCE(auth.role(), '') <> 'service_role' THEN
+    RAISE EXCEPTION 'Only service_role can change user roles';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS protect_user_role ON public.users;
+CREATE TRIGGER protect_user_role
+  BEFORE UPDATE ON public.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.prevent_user_role_change();
+
 -- RLS Policies for songs (public read)
 CREATE POLICY "Anyone can view songs" ON public.songs
   FOR SELECT USING (true);
@@ -340,15 +363,16 @@ INSERT INTO public.achievements (name, description, icon, xp_reward, condition) 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, username, student_id)
+  INSERT INTO public.users (id, username, student_id, role)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || substr(NEW.id::text, 1, 8)),
-    COALESCE(NEW.raw_user_meta_data->>'student_id', 'STUDENT-' || substr(NEW.id::text, 1, 8))
+    COALESCE(NEW.raw_user_meta_data->>'student_id', 'STUDENT-' || substr(NEW.id::text, 1, 8)),
+    'user'
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger to automatically create user profile on signup
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
