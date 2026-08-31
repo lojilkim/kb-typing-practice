@@ -1,25 +1,35 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/session"
-import { prisma } from "@/lib/prisma"
+import { getUser, getSupabase } from "@/lib/supabase-helpers"
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const achievements = await prisma.achievement.findMany()
-    const userAchievements = await prisma.userAchievement.findMany({
-      where: { userId: session.user.id },
-    })
+    const supabase = await getSupabase()
 
-    const earnedIds = new Set(userAchievements.map((ua) => ua.achievementId))
+    const { data: achievements } = await supabase
+      .from('achievements')
+      .select('*')
 
-    const achievementsWithStatus = achievements.map((achievement) => ({
-      ...achievement,
+    const { data: userAchievements } = await supabase
+      .from('user_achievements')
+      .select('*')
+      .eq('user_id', user.id)
+
+    const earnedIds = new Set((userAchievements || []).map((ua) => ua.achievement_id))
+
+    const achievementsWithStatus = (achievements || []).map((achievement) => ({
+      id: achievement.id,
+      name: achievement.name,
+      description: achievement.description,
+      icon: achievement.icon,
+      xpReward: achievement.xp_reward,
+      condition: achievement.condition,
       earned: earnedIds.has(achievement.id),
-      earnedAt: userAchievements.find((ua) => ua.achievementId === achievement.id)?.earnedAt,
+      earnedAt: (userAchievements || []).find((ua) => ua.achievement_id === achievement.id)?.earned_at,
     }))
 
     return NextResponse.json(achievementsWithStatus)

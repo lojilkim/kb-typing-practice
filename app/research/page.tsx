@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "../components/SupabaseAuthProvider"
 import { useRouter } from "next/navigation"
 import Sidebar from "../components/Sidebar"
 
@@ -66,17 +66,17 @@ interface ResearchData {
 }
 
 export default function ResearchPage() {
-  const { status } = useSession()
+  const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [data, setData] = useState<ResearchData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
-  }, [status, router])
+    if (!authLoading && !profile) router.push("/login")
+  }, [authLoading, profile, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (profile) {
       const fetchResearchData = async () => {
         try {
           const res = await fetch("/api/research")
@@ -90,7 +90,7 @@ export default function ResearchPage() {
       }
       fetchResearchData()
     }
-  }, [status])
+  }, [profile])
 
   const exportData = async () => {
     try {

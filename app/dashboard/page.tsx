@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "../components/SupabaseAuthProvider"
 import Link from "next/link"
 
 interface Stats {
@@ -21,47 +21,48 @@ interface Session {
   wpm: number
   accuracy: number
   duration: number
-  wordsTyped: number
-  createdAt: string
+  words_typed: number
+  created_at: string
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession()
+  const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!authLoading && !profile) {
       router.push("/login")
     }
-  }, [status, router])
+  }, [authLoading, profile, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
-      const fetchDashboardData = async () => {
-        try {
-          const sessionsRes = await fetch("/api/practice")
-          const sessions: Session[] = await sessionsRes.json()
-          setRecentSessions(sessions.slice(0, 5))
-
-          const userRes = await fetch("/api/user")
-          if (userRes.ok) {
-            const userData = await userRes.json()
-            setStats(userData)
-          }
-        } catch (error) {
-          console.error("Failed to fetch dashboard data:", error)
-        } finally {
-          setLoading(false)
-        }
-      }
+    if (profile) {
       fetchDashboardData()
     }
-  }, [status])
+  }, [profile])
 
-  if (loading) {
+  const fetchDashboardData = async () => {
+    try {
+      const sessionsRes = await fetch("/api/practice")
+      const sessions: Session[] = await sessionsRes.json()
+      setRecentSessions(sessions.slice(0, 5))
+
+      const userRes = await fetch("/api/user")
+      if (userRes.ok) {
+        const userData = await userRes.json()
+        setStats(userData)
+      }
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-xl" style={{ color: "var(--text-muted)" }}>Loading...</div>
@@ -75,7 +76,7 @@ export default function DashboardPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Welcome back, {session?.user?.username}!</h1>
+        <h1 className="text-3xl font-bold mb-2">Welcome back, {(profile?.username as string)}!</h1>
         <p style={{ color: "var(--text-muted)" }}>Here&apos;s your typing progress overview</p>
       </div>
 
@@ -156,11 +157,11 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-semibold">{session.wpm} WPM</p>
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {session.accuracy}% accuracy • {session.wordsTyped} words
+                      {session.accuracy}% accuracy • {session.words_typed} words
                     </p>
                   </div>
                   <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    {new Date(session.createdAt).toLocaleDateString()}
+                    {new Date(session.created_at).toLocaleDateString()}
                   </p>
                 </div>
               ))}

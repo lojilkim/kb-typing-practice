@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "../components/SupabaseAuthProvider"
 import { useTheme } from "../components/ThemeProvider"
 
 export default function SettingsPage() {
-  const { status } = useSession()
+  const { profile, loading: authLoading } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [fontSize, setFontSize] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -124,7 +124,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <div className="p-3 rounded-lg" style={{ background: "var(--secondary)" }}>
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>Username</p>
-              <p className="font-semibold">{status === "authenticated" ? "User" : "Loading..."}</p>
+              <p className="font-semibold">{profile ? (profile.username as string) : "Loading..."}</p>
             </div>
             <div className="p-3 rounded-lg" style={{ background: "var(--secondary)" }}>
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>Student ID</p>

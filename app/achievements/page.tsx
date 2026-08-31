@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "../components/SupabaseAuthProvider"
 import { useRouter } from "next/navigation"
 
 interface Achievement {
@@ -16,17 +16,17 @@ interface Achievement {
 }
 
 export default function AchievementsPage() {
-  const { status } = useSession()
+  const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
-  }, [status, router])
+    if (!authLoading && !profile) router.push("/login")
+  }, [authLoading, profile, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (profile) {
       const fetchAchievements = async () => {
         try {
           const res = await fetch("/api/achievements")
@@ -39,7 +39,7 @@ export default function AchievementsPage() {
       }
       fetchAchievements()
     }
-  }, [status])
+  }, [profile])
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="text-xl" style={{ color: "var(--text-muted)" }}>Loading...</div></div>

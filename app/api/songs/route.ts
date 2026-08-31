@@ -1,36 +1,44 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/session"
-import { prisma } from "@/lib/prisma"
+import { getUser, getSupabase } from "@/lib/supabase-helpers"
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    })
+    const supabase = await getSupabase()
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+    const { data: songs } = await supabase
+      .from('songs')
+      .select('*')
+      .order('unlock_level', { ascending: true })
 
-    const songs = await prisma.song.findMany({
-      orderBy: { unlockLevel: "asc" },
-    })
+    const { data: userSongs } = await supabase
+      .from('user_songs')
+      .select('*')
+      .eq('user_id', user.id)
 
-    const userSongs = await prisma.userSong.findMany({
-      where: { userId: session.user.id },
-    })
+    const userSongMap = new Map((userSongs || []).map((us) => [us.song_id, us]))
 
-    const userSongMap = new Map(userSongs.map((us) => [us.songId, us]))
-
-    const songsWithProgress = songs.map((song) => ({
-      ...song,
-      unlocked: user.level >= song.unlockLevel,
-      userProgress: userSongMap.get(song.id) || null,
+    const songsWithProgress = (songs || []).map((song) => ({
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      lyrics: song.lyrics,
+      difficulty: song.difficulty,
+      unlockLevel: song.unlock_level,
+      genre: song.genre,
+      unlocked: user.level >= song.unlock_level,
+      userProgress: userSongMap.get(song.id)
+        ? {
+            bestWpm: userSongMap.get(song.id)!.best_wpm,
+            bestAccuracy: userSongMap.get(song.id)!.best_accuracy,
+            completed: userSongMap.get(song.id)!.completed,
+            attempts: userSongMap.get(song.id)!.attempts,
+          }
+        : null,
     }))
 
     return NextResponse.json(songsWithProgress)

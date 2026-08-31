@@ -1,33 +1,23 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/session"
-import { prisma } from "@/lib/prisma"
+import { getUser, getSupabase } from "@/lib/supabase-helpers"
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        bestWpm: true,
-        bestAccuracy: true,
-        totalPracticeTime: true,
-        totalWordsTyped: true,
-        currentStreak: true,
-        longestStreak: true,
-        level: true,
-        xp: true,
-      },
+    return NextResponse.json({
+      bestWpm: user.best_wpm,
+      bestAccuracy: user.best_accuracy,
+      totalPracticeTime: user.total_practice_time,
+      totalWordsTyped: user.total_words_typed,
+      currentStreak: user.current_streak,
+      longestStreak: user.longest_streak,
+      level: user.level,
+      xp: user.xp,
     })
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
-
-    return NextResponse.json(user)
   } catch (error) {
     console.error("Fetch user error:", error)
     return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 })

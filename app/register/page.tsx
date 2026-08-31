@@ -3,9 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { createClient } from "@/utils/supabase/client"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -29,25 +31,33 @@ export default function RegisterPage() {
 
     setLoading(true)
 
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, studentId }),
+    const { error } = await supabase.auth.signUp({
+      email: `${username}@typemaster.local`,
+      password,
+      options: {
+        data: {
+          username,
+          student_id: studentId,
+        },
+      },
+    })
+
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+    } else {
+      // Auto sign in after registration
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: `${username}@typemaster.local`,
+        password,
       })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || "Registration failed")
-        setLoading(false)
-        return
+      if (signInError) {
+        router.push("/login?registered=true")
+      } else {
+        router.push("/dashboard")
+        router.refresh()
       }
-
-      router.push("/login?registered=true")
-    } catch {
-      setError("Failed to create account")
-      setLoading(false)
     }
   }
 

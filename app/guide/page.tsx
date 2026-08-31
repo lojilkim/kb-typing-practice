@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "../components/SupabaseAuthProvider"
 import { useRouter } from "next/navigation"
 
 const keyboardRows = [
@@ -51,13 +51,13 @@ const fingerColors: Record<string, string> = {
 }
 
 export default function GuidePage() {
-  const { status } = useSession()
+  const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [activeKey, setActiveKey] = useState<string | null>(null)
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
-  }, [status, router])
+    if (!authLoading && !profile) router.push("/login")
+  }, [authLoading, profile, router])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

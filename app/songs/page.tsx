@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "../components/SupabaseAuthProvider"
 import { useRouter } from "next/navigation"
 import MusicPlayer from "../components/MusicPlayer"
 import { calculateTypingStats } from "@/lib/typing-engine"
@@ -24,20 +24,20 @@ interface Song {
 }
 
 export default function SongsPage() {
-  const { status } = useSession()
+  const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedSong, setSelectedSong] = useState<Song | null>(null)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!authLoading && !profile) {
       router.push("/login")
     }
-  }, [status, router])
+  }, [authLoading, profile, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (profile) {
       const fetchSongs = async () => {
         try {
           const res = await fetch("/api/songs")
@@ -51,7 +51,7 @@ export default function SongsPage() {
       }
       fetchSongs()
     }
-  }, [status])
+  }, [profile])
 
   if (loading) {
     return (
@@ -132,6 +132,7 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
   const [showResults, setShowResults] = useState(false)
   const [musicEnabled, setMusicEnabled] = useState(true)
   const [volume, setVolume] = useState(70)
+  const [elapsedTime, setElapsedTime] = useState(0)
 
   const words = song.lyrics.split(" ")
   const typedWords = typedText.split(" ")
@@ -169,8 +170,18 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
       setIsComplete(true)
       setShowResults(true)
       saveProgress()
+      localStorage.removeItem("unfinishedTypingSession")
     }
   }, [typedText, song.lyrics.length, saveProgress])
+
+  useEffect(() => {
+    if (startTime && !isComplete) {
+      const interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - startTime) / 1000))
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [startTime, isComplete])
 
   useEffect(() => {
     if (startTime && typedText.length > 0) {
@@ -179,6 +190,43 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
       setWpm(Math.round(wordsTyped / elapsed))
     }
   }, [typedText, startTime])
+
+  useEffect(() => {
+    if (typedText.length > 0 && !isComplete) {
+      const sessionData = {
+        type: "song",
+        songId: song.id,
+        songTitle: song.title,
+        typedText,
+        startTime,
+        wpm,
+        accuracy,
+        errors,
+        musicEnabled,
+      }
+      localStorage.setItem("unfinishedTypingSession", JSON.stringify(sessionData))
+    }
+  }, [typedText, isComplete, song.id, song.title, startTime, wpm, accuracy, errors, musicEnabled])
+
+  const handleBack = () => {
+    if (typedText.length > 0 && !isComplete) {
+      const sessionData = {
+        type: "song",
+        songId: song.id,
+        songTitle: song.title,
+        typedText,
+        startTime,
+        wpm,
+        accuracy,
+        errors,
+        musicEnabled,
+      }
+      localStorage.setItem("unfinishedTypingSession", JSON.stringify(sessionData))
+    } else {
+      localStorage.removeItem("unfinishedTypingSession")
+    }
+    onBack()
+  }
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!startTime) {
@@ -240,7 +288,7 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <button onClick={onBack} className="btn-secondary mb-4">
+        <button onClick={handleBack} className="btn-secondary mb-4">
           Back to Songs
         </button>
         <h1 className="text-2xl font-bold">{song.title}</h1>
@@ -262,6 +310,12 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
               <div>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>Errors</p>
                 <p className="text-2xl font-bold" style={{ color: "var(--error)" }}>{errors}</p>
+              </div>
+              <div>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>Time</p>
+                <p className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
+                  {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                </p>
               </div>
             </div>
 

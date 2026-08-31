@@ -1,36 +1,44 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/session"
-import { prisma } from "@/lib/prisma"
+import { getUser, getSupabase } from "@/lib/supabase-helpers"
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    })
+    const supabase = await getSupabase()
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+    const { data: lessons } = await supabase
+      .from('lessons')
+      .select('*')
+      .order('sort_order', { ascending: true })
 
-    const lessons = await prisma.lesson.findMany({
-      orderBy: { order: "asc" },
-    })
+    const { data: userLessons } = await supabase
+      .from('user_lessons')
+      .select('*')
+      .eq('user_id', user.id)
 
-    const userLessons = await prisma.userLesson.findMany({
-      where: { userId: session.user.id },
-    })
+    const userLessonMap = new Map((userLessons || []).map((ul) => [ul.lesson_id, ul]))
 
-    const userLessonMap = new Map(userLessons.map((ul) => [ul.lessonId, ul]))
-
-    const lessonsWithProgress = lessons.map((lesson) => ({
-      ...lesson,
-      unlocked: user.level >= lesson.unlockLevel,
-      userProgress: userLessonMap.get(lesson.id) || null,
+    const lessonsWithProgress = (lessons || []).map((lesson) => ({
+      id: lesson.id,
+      name: lesson.name,
+      category: lesson.category,
+      difficulty: lesson.difficulty,
+      content: lesson.content,
+      unlockLevel: lesson.unlock_level,
+      order: lesson.sort_order,
+      unlocked: user.level >= lesson.unlock_level,
+      userProgress: userLessonMap.get(lesson.id)
+        ? {
+            bestWpm: userLessonMap.get(lesson.id)!.best_wpm,
+            bestAccuracy: userLessonMap.get(lesson.id)!.best_accuracy,
+            completed: userLessonMap.get(lesson.id)!.completed,
+            attempts: userLessonMap.get(lesson.id)!.attempts,
+          }
+        : null,
     }))
 
     return NextResponse.json(lessonsWithProgress)

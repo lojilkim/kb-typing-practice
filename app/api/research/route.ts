@@ -1,78 +1,68 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/session"
-import { prisma } from "@/lib/prisma"
+import { getUser, getSupabase } from "@/lib/supabase-helpers"
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session?.user?.id) {
+    const user = await getUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const userId = session.user.id
+    const supabase = await getSupabase()
 
-    // Get user's overall stats
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        practiceSessions: {
-          orderBy: { createdAt: "desc" },
-          take: 100,
-          include: {
-            song: true,
-            lesson: true,
-          },
-        },
-      },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
+    // Get practice sessions
+    const { data: sessions } = await supabase
+      .from('practice_sessions')
+      .select('*, song:songs(*), lesson:lessons(*)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100)
 
     // Calculate practice frequency
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const recentSessions = user.practiceSessions.filter(
-      (s) => new Date(s.createdAt) >= thirtyDaysAgo
+    const recentSessions = (sessions || []).filter(
+      (s) => new Date(s.created_at) >= thirtyDaysAgo
     )
 
     const practiceDays = new Set(
-      recentSessions.map((s) => new Date(s.createdAt).toDateString())
+      recentSessions.map((s) => new Date(s.created_at).toDateString())
     ).size
 
     // Get finger statistics
-    const fingerStats = await prisma.fingerStat.findMany({
-      where: { userId },
-    })
+    const { data: fingerStats } = await supabase
+      .from('finger_stats')
+      .select('*')
+      .eq('user_id', user.id)
 
     // Get error patterns
-    const errorLogs = await prisma.errorLog.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 500,
-    })
+    const { data: errorLogs } = await supabase
+      .from('error_logs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(500)
 
     // Analyze errors by row
-    const errorsByRow = errorLogs.reduce((acc, log) => {
+    const errorsByRow = (errorLogs || []).reduce((acc, log) => {
       const row = log.row || "unknown"
       acc[row] = (acc[row] || 0) + 1
       return acc
     }, {} as Record<string, number>)
 
     // Analyze errors by hand
-    const errorsByHand = errorLogs.reduce((acc, log) => {
+    const errorsByHand = (errorLogs || []).reduce((acc, log) => {
       const hand = log.hand || "unknown"
       acc[hand] = (acc[hand] || 0) + 1
       return acc
     }, {} as Record<string, number>)
 
     // Calculate improvement trend
-    type SessionData = { wpm: number; accuracy: number; createdAt: Date }
+    type SessionData = { wpm: number; accuracy: number; created_at: string }
     const sessionsByWeek: Record<string, SessionData[]> = {}
-    user.practiceSessions.forEach((session) => {
-      const date = new Date(session.createdAt)
+    ;(sessions || []).forEach((session) => {
+      const date = new Date(session.created_at)
       const weekKey = `${date.getFullYear()}-W${Math.floor(date.getDate() / 7)}`
       if (!sessionsByWeek[weekKey]) {
         sessionsByWeek[weekKey] = []
@@ -80,32 +70,33 @@ export async function GET() {
       sessionsByWeek[weekKey].push(session)
     })
 
-    const weeklyAverages = Object.entries(sessionsByWeek).map(([week, sessions]) => {
-      const avgWpm = sessions.reduce((sum, s) => sum + s.wpm, 0) / sessions.length
-      const avgAccuracy = sessions.reduce((sum, s) => sum + s.accuracy, 0) / sessions.length
+    const weeklyAverages = Object.entries(sessionsByWeek).map(([week, weekSessions]) => {
+      const avgWpm = weekSessions.reduce((sum, s) => sum + s.wpm, 0) / weekSessions.length
+      const avgAccuracy = weekSessions.reduce((sum, s) => sum + s.accuracy, 0) / weekSessions.length
       return { week, avgWpm: Math.round(avgWpm), avgAccuracy: Math.round(avgAccuracy * 100) / 100 }
     })
 
     // Get practice calendar data
-    const calendarData = await prisma.practiceCalendar.findMany({
-      where: { userId },
-      orderBy: { date: "desc" },
-      take: 90,
-    })
+    const { data: calendarData } = await supabase
+      .from('practice_calendar')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+      .limit(90)
 
-    // Calculate key metrics for research
-    const totalSessions = user.practiceSessions.length
-    const totalTimeMinutes = Math.round(user.totalPracticeTime / 60)
-    const overallAccuracy = user.practiceSessions.length > 0
-      ? user.practiceSessions.reduce((sum, s) => sum + s.accuracy, 0) / user.practiceSessions.length
+    // Calculate key metrics
+    const totalSessions = (sessions || []).length
+    const totalTimeMinutes = Math.round(user.total_practice_time / 60)
+    const overallAccuracy = totalSessions > 0
+      ? (sessions || []).reduce((sum, s) => sum + s.accuracy, 0) / totalSessions
       : 0
 
-    const avgWpm = user.practiceSessions.length > 0
-      ? user.practiceSessions.reduce((sum, s) => sum + s.wpm, 0) / user.practiceSessions.length
+    const avgWpm = totalSessions > 0
+      ? (sessions || []).reduce((sum, s) => sum + s.wpm, 0) / totalSessions
       : 0
 
     // Music usage statistics
-    const sessionsWithMusic = user.practiceSessions.filter((s) => s.musicEnabled).length
+    const sessionsWithMusic = (sessions || []).filter((s) => s.music_enabled).length
     const musicUsageRate = totalSessions > 0 ? (sessionsWithMusic / totalSessions) * 100 : 0
 
     return NextResponse.json({
@@ -114,10 +105,10 @@ export async function GET() {
         totalTimeMinutes,
         overallAccuracy: Math.round(overallAccuracy * 100) / 100,
         averageWpm: Math.round(avgWpm),
-        bestWpm: user.bestWpm,
-        bestAccuracy: user.bestAccuracy,
-        currentStreak: user.currentStreak,
-        longestStreak: user.longestStreak,
+        bestWpm: user.best_wpm,
+        bestAccuracy: user.best_accuracy,
+        currentStreak: user.current_streak,
+        longestStreak: user.longest_streak,
         practiceDaysLast30: practiceDays,
       },
       musicUsage: {
@@ -125,42 +116,42 @@ export async function GET() {
         totalSessions,
         usageRate: Math.round(musicUsageRate),
       },
-      fingerStats: fingerStats.map((stat) => ({
+      fingerStats: (fingerStats || []).map((stat) => ({
         finger: stat.finger,
         accuracy: Math.round(stat.accuracy * 100) / 100,
-        totalKeystrokes: stat.totalKeystrokes,
-        correctKeystrokes: stat.correctKeystrokes,
+        totalKeystrokes: stat.total_keystrokes,
+        correctKeystrokes: stat.correct_keystrokes,
       })),
       errorPatterns: {
         byRow: errorsByRow,
         byHand: errorsByHand,
-        totalErrors: errorLogs.length,
-        mostCommonErrors: errorLogs.slice(0, 20).map((log) => ({
-          expected: log.expectedKey,
-          typed: log.typedKey,
+        totalErrors: (errorLogs || []).length,
+        mostCommonErrors: (errorLogs || []).slice(0, 20).map((log) => ({
+          expected: log.expected_key,
+          typed: log.typed_key,
           finger: log.finger,
           row: log.row,
           hand: log.hand,
         })),
       },
       improvementTrend: weeklyAverages,
-      practiceCalendar: calendarData.map((day) => ({
+      practiceCalendar: (calendarData || []).map((day) => ({
         date: day.date,
-        practiceMinutes: day.practiceMinutes,
-        sessionsCount: day.sessionsCount,
-        wordsTyped: day.wordsTyped,
-        averageWpm: Math.round(day.averageWpm),
-        averageAccuracy: Math.round(day.averageAccuracy * 100) / 100,
+        practiceMinutes: day.practice_minutes,
+        sessionsCount: day.sessions_count,
+        wordsTyped: day.words_typed,
+        averageWpm: Math.round(day.average_wpm),
+        averageAccuracy: Math.round(day.average_accuracy * 100) / 100,
       })),
-      recentSessions: user.practiceSessions.slice(0, 20).map((s) => ({
-        date: s.createdAt,
+      recentSessions: (sessions || []).slice(0, 20).map((s) => ({
+        date: s.created_at,
         wpm: s.wpm,
         accuracy: s.accuracy,
         duration: s.duration,
-        wordsTyped: s.wordsTyped,
+        wordsTyped: s.words_typed,
         songTitle: s.song?.title,
         lessonName: s.lesson?.name,
-        musicEnabled: s.musicEnabled,
+        musicEnabled: s.music_enabled,
       })),
     })
   } catch (error) {

@@ -1,18 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "./ThemeProvider"
-import { signOut, useSession } from "next-auth/react"
-
-interface ExtendedUser {
-  id: string
-  username: string
-  studentId: string
-  profilePicture: string | null
-  level: number
-  xp: number
-}
+import { useAuth } from "./SupabaseAuthProvider"
+import LogoutDialog from "./LogoutDialog"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -28,9 +21,8 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname()
   const { theme, toggleTheme } = useTheme()
-  const { data: session } = useSession()
-
-  const user = session?.user as ExtendedUser | undefined
+  const { profile } = useAuth()
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 p-4 flex flex-col" style={{ background: "var(--card-bg)", borderRight: "1px solid var(--card-border)" }}>
@@ -43,16 +35,16 @@ export default function Sidebar() {
         </p>
       </div>
 
-      {user && (
+      {profile && (
         <div className="mb-6 p-3 rounded-lg" style={{ background: "var(--secondary)" }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ background: "var(--primary)" }}>
-              {user.username?.[0]?.toUpperCase() || "U"}
+              {(profile.username as string)?.[0]?.toUpperCase() || "U"}
             </div>
             <div>
-              <p className="font-semibold text-sm">{user.username}</p>
+              <p className="font-semibold text-sm">{profile.username as string}</p>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                Level {user.level} • {user.xp} XP
+                Level {profile.level as number} • {profile.xp as number} XP
               </p>
             </div>
           </div>
@@ -81,13 +73,22 @@ export default function Sidebar() {
           <span className="font-medium">{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
         </button>
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="sidebar-link w-full"
+          onClick={() => setShowLogoutDialog(true)}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all hover:scale-105"
+          style={{ 
+            background: "var(--error)",
+            color: "white"
+          }}
         >
           <span className="text-xl">🚪</span>
-          <span className="font-medium">Sign Out</span>
+          <span>Logout</span>
         </button>
       </div>
+
+      <LogoutDialog
+        isOpen={showLogoutDialog}
+        onClose={() => setShowLogoutDialog(false)}
+      />
     </aside>
   )
 }

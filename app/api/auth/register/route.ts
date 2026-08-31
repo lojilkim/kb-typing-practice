@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server"
-import { hash } from "bcrypt"
-import { prisma } from "@/lib/prisma"
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
@@ -8,45 +8,76 @@ export async function POST(request: Request) {
 
     if (!username || !password || !studentId) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username },
-          { studentId },
-        ],
-      },
-    })
+    const cookieStore = await cookies()
+    const supabase = createClient(cookieStore)
+
+    // Check if username already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', username)
+      .single()
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "Username or student ID already exists" },
+        { error: 'Username already exists' },
         { status: 400 }
       )
     }
 
-    const hashedPassword = await hash(password, 10)
+    // Check if student ID already exists
+    const { data: existingStudent } = await supabase
+      .from('users')
+      .select('id')
+      .eq('student_id', studentId)
+      .single()
 
-    const user = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        studentId,
+    if (existingStudent) {
+      return NextResponse.json(
+        { error: 'Student ID already registered' },
+        { status: 400 }
+      )
+    }
+
+    // Create auth user with metadata
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: `${username}@typemaster.local`,
+      password,
+      options: {
+        data: {
+          username,
+          student_id: studentId,
+        },
       },
     })
 
+    if (authError) {
+      return NextResponse.json(
+        { error: authError.message },
+        { status: 400 }
+      )
+    }
+
+    if (!authData.user) {
+      return NextResponse.json(
+        { error: 'Failed to create user' },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json(
-      { message: "User created successfully", userId: user.id },
+      { message: 'User created successfully', userId: authData.user.id },
       { status: 201 }
     )
   } catch (error) {
-    console.error("Registration error:", error)
+    console.error('Registration error:', error)
     return NextResponse.json(
-      { error: "Failed to create user" },
+      { error: 'Failed to create user' },
       { status: 500 }
     )
   }

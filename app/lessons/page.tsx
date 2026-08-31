@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "../components/SupabaseAuthProvider"
 import { useRouter } from "next/navigation"
 import MusicPlayer from "../components/MusicPlayer"
 import { calculateTypingStats } from "@/lib/typing-engine"
@@ -24,18 +24,18 @@ interface Lesson {
 }
 
 export default function LessonsPage() {
-  const { status } = useSession()
+  const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
 
   useEffect(() => {
-    if (status === "unauthenticated") router.push("/login")
-  }, [status, router])
+    if (!authLoading && !profile) router.push("/login")
+  }, [authLoading, profile, router])
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (profile) {
       const fetchLessons = async () => {
         try {
           const res = await fetch("/api/lessons")
@@ -48,7 +48,7 @@ export default function LessonsPage() {
       }
       fetchLessons()
     }
-  }, [status])
+  }, [profile])
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="text-xl" style={{ color: "var(--text-muted)" }}>Loading...</div></div>
@@ -118,6 +118,7 @@ function TypingPractice({ lesson, onBack }: { lesson: Lesson; onBack: () => void
   const [showResults, setShowResults] = useState(false)
   const [musicEnabled, setMusicEnabled] = useState(true)
   const [volume, setVolume] = useState(70)
+  const [elapsedTime, setElapsedTime] = useState(0)
 
   const saveProgress = useCallback(async () => {
     const duration = startTime ? Math.round((Date.now() - startTime) / 1000) : 0
@@ -152,8 +153,18 @@ function TypingPractice({ lesson, onBack }: { lesson: Lesson; onBack: () => void
       setIsComplete(true)
       setShowResults(true)
       saveProgress()
+      localStorage.removeItem("unfinishedTypingSession")
     }
   }, [typedText, lesson.content.length, saveProgress])
+
+  useEffect(() => {
+    if (startTime && !isComplete) {
+      const interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - startTime) / 1000))
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [startTime, isComplete])
 
   useEffect(() => {
     if (startTime && typedText.length > 0) {
@@ -162,6 +173,43 @@ function TypingPractice({ lesson, onBack }: { lesson: Lesson; onBack: () => void
       setWpm(Math.round(wordsTyped / elapsed))
     }
   }, [typedText, startTime])
+
+  useEffect(() => {
+    if (typedText.length > 0 && !isComplete) {
+      const sessionData = {
+        type: "lesson",
+        lessonId: lesson.id,
+        lessonName: lesson.name,
+        typedText,
+        startTime,
+        wpm,
+        accuracy,
+        errors,
+        musicEnabled,
+      }
+      localStorage.setItem("unfinishedTypingSession", JSON.stringify(sessionData))
+    }
+  }, [typedText, isComplete, lesson.id, lesson.name, startTime, wpm, accuracy, errors, musicEnabled])
+
+  const handleBack = () => {
+    if (typedText.length > 0 && !isComplete) {
+      const sessionData = {
+        type: "lesson",
+        lessonId: lesson.id,
+        lessonName: lesson.name,
+        typedText,
+        startTime,
+        wpm,
+        accuracy,
+        errors,
+        musicEnabled,
+      }
+      localStorage.setItem("unfinishedTypingSession", JSON.stringify(sessionData))
+    } else {
+      localStorage.removeItem("unfinishedTypingSession")
+    }
+    onBack()
+  }
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!startTime) setStartTime(Date.now())
@@ -208,7 +256,7 @@ function TypingPractice({ lesson, onBack }: { lesson: Lesson; onBack: () => void
 
   return (
     <div className="max-w-4xl mx-auto">
-      <button onClick={onBack} className="btn-secondary mb-6">Back to Lessons</button>
+      <button onClick={handleBack} className="btn-secondary mb-6">Back to Lessons</button>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="card">
@@ -226,6 +274,12 @@ function TypingPractice({ lesson, onBack }: { lesson: Lesson; onBack: () => void
               <div>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>Errors</p>
                 <p className="text-2xl font-bold" style={{ color: "var(--error)" }}>{errors}</p>
+              </div>
+              <div>
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>Time</p>
+                <p className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
+                  {Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}
+                </p>
               </div>
             </div>
             <div className="progress-bar mb-6">
