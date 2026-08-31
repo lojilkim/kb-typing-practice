@@ -30,7 +30,7 @@ export async function GET() {
       difficulty: song.difficulty,
       unlockLevel: song.unlock_level,
       genre: song.genre,
-      unlocked: user.level >= song.unlock_level,
+      unlocked: true,
       userProgress: userSongMap.get(song.id)
         ? {
             bestWpm: userSongMap.get(song.id)!.best_wpm,
