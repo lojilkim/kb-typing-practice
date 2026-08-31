@@ -4,9 +4,9 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
-    const { username, password, studentId } = await request.json()
+    const { username, email, password, studentId } = await request.json()
 
-    if (!username || !password || !studentId) {
+    if (!username || !email || !password || !studentId || !email.includes('@')) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -46,12 +46,13 @@ export async function POST(request: Request) {
 
     // Create auth user with metadata
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: `${username}@typemaster.local`,
+      email,
       password,
       options: {
         data: {
           username,
           student_id: studentId,
+          recovery_email: email,
         },
       },
     })
