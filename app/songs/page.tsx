@@ -23,6 +23,17 @@ interface Song {
   } | null
 }
 
+const songAudio: Record<string, string> = {
+  "Twinkle Twinkle Little Star": "/Twinkle%20Twinkle%20Little%20Star%20with%20Lyrics%20%20Nursery%20Rhymes%20for%20Kids.mp3",
+  "Happy Birthday": "/Happy%20Birthday%20song.mp3",
+  "Jingle Bells": "/Jingle%20Bells%20with%20Lyrics%20%20Christmas%20Songs%20HD%20%20Christmas%20Songs%20and%20Carols.mp3",
+  "Imagine": "/John%20Lennon%20-%20Imagine%20(Lyrics).mp3",
+  "Let It Be": "/The%20Beatles%20-%20Let%20It%20Be%20(Lyrics)%20%5B4K%20Lyric%20Video%5D.mp3",
+  "Hotel California": "/Eagles%20-%20Hotel%20California%20%20Lyric%20Video%20%20Lirik%20Indonesia%20%20Indo%20Subtitle%20%20Lirik%20Terjemahan.mp3",
+  "Shape of You": "/Ed%20Sheeran%20-%20Shape%20of%20You%20(Lyrics).mp3",
+  "Counting Stars": "/OneRepublic%20-%20Counting%20Stars%20(Lyrics).mp3",
+}
+
 export default function SongsPage() {
   const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -133,6 +144,7 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
   const [musicEnabled, setMusicEnabled] = useState(true)
   const [volume, setVolume] = useState(70)
   const [elapsedTime, setElapsedTime] = useState(0)
+  const [playRequest, setPlayRequest] = useState(0)
 
   const words = song.lyrics.split(" ")
   const typedWords = typedText.split(" ")
@@ -231,6 +243,7 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!startTime) {
       setStartTime(Date.now())
+      setPlayRequest((request) => request + 1)
     }
 
     const value = e.target.value
@@ -352,6 +365,9 @@ function TypingPractice({ song, onBack }: { song: Song; onBack: () => void }) {
             onToggle={setMusicEnabled}
             volume={volume}
             onVolumeChange={setVolume}
+            audioUrl={songAudio[song.title]}
+            trackName={`${song.title} - ${song.artist}`}
+            playRequest={playRequest}
           />
         </div>
       </div>

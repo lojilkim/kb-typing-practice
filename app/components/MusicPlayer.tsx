@@ -7,68 +7,57 @@ interface MusicPlayerProps {
   onToggle: (enabled: boolean) => void
   volume: number
   onVolumeChange: (volume: number) => void
+  audioUrl: string
+  trackName: string
+  playRequest?: number
 }
 
-const tracks = [
-  { id: "lofi-1", name: "Lo-fi Study Beat", url: "/music/lofi-study.mp3" },
-  { id: "classical-1", name: "Classical Piano", url: "/music/classical-piano.mp3" },
-  { id: "ambient-1", name: "Ambient Focus", url: "/music/ambient-focus.mp3" },
-]
-
-export default function MusicPlayer({ enabled, onToggle, volume, onVolumeChange }: MusicPlayerProps) {
-  const [currentTrack, setCurrentTrack] = useState(0)
+export default function MusicPlayer({
+  enabled,
+  onToggle,
+  volume,
+  onVolumeChange,
+  audioUrl,
+  trackName,
+  playRequest = 0,
+}: MusicPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
-    audioRef.current = new Audio(tracks[currentTrack].url)
-    audioRef.current.loop = true
-    audioRef.current.volume = volume / 100
-
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-    }
-  }, [currentTrack, volume])
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume / 100
-    }
+    if (audioRef.current) audioRef.current.volume = volume / 100
   }, [volume])
 
   useEffect(() => {
-    if (enabled && audioRef.current) {
-      audioRef.current.play().catch(() => {})
-      setIsPlaying(true)
-    } else if (audioRef.current) {
-      audioRef.current.pause()
-      setIsPlaying(false)
-    }
+    if (!enabled && audioRef.current) audioRef.current.pause()
   }, [enabled])
 
-  const togglePlay = () => {
-    if (!audioRef.current) return
+  useEffect(() => {
+    if (playRequest > 0 && enabled && audioRef.current) {
+      audioRef.current.play().catch(() => onToggle(false))
+    }
+  }, [playRequest, enabled, onToggle])
 
+  const togglePlay = async () => {
+    if (!audioRef.current) return
     if (isPlaying) {
       audioRef.current.pause()
-      setIsPlaying(false)
       onToggle(false)
-    } else {
-      audioRef.current.play().catch(() => {})
-      setIsPlaying(true)
+      return
+    }
+
+    try {
+      await audioRef.current.play()
       onToggle(true)
+    } catch {
+      onToggle(false)
     }
   }
 
   return (
     <div className="card p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold flex items-center gap-2">
-          🎵 Background Music
-        </h3>
+        <h3 className="font-semibold flex items-center gap-2">🎵 Song Music</h3>
         <button
           onClick={togglePlay}
           className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
@@ -82,23 +71,23 @@ export default function MusicPlayer({ enabled, onToggle, volume, onVolumeChange 
       </div>
 
       <div className="mb-3">
-        <p className="text-sm font-medium mb-1">{tracks[currentTrack].name}</p>
-        <div className="flex gap-2">
-          {tracks.map((track, index) => (
-            <button
-              key={track.id}
-              onClick={() => setCurrentTrack(index)}
-              className={`flex-1 py-1 rounded text-xs transition-all ${
-                index === currentTrack
-                  ? "bg-[var(--primary)] text-white"
-                  : "bg-[var(--secondary)] text-[var(--text-muted)]"
-              }`}
-            >
-              {index + 1}
-            </button>
-          ))}
-        </div>
+        <p className="text-sm font-medium mb-1">{trackName}</p>
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          The recording matches the lyrics shown on the left.
+        </p>
       </div>
+
+      <audio
+        ref={audioRef}
+        controls
+        loop
+        preload="auto"
+        src={audioUrl}
+        className="w-full mb-3"
+        aria-label={`${trackName} audio`}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      />
 
       <div>
         <div className="flex items-center justify-between mb-1">

@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react"
 import { useAuth } from "../components/SupabaseAuthProvider"
 import { useRouter } from "next/navigation"
-import MusicPlayer from "../components/MusicPlayer"
 import { calculateTypingStats } from "@/lib/typing-engine"
 
 interface Lesson {
@@ -116,8 +115,7 @@ function TypingPractice({ lesson, onBack }: { lesson: Lesson; onBack: () => void
   const [errors, setErrors] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
   const [showResults, setShowResults] = useState(false)
-  const [musicEnabled, setMusicEnabled] = useState(true)
-  const [volume, setVolume] = useState(70)
+  const [musicEnabled] = useState(true)
   const [elapsedTime, setElapsedTime] = useState(0)
 
   const saveProgress = useCallback(async () => {
@@ -308,14 +306,6 @@ function TypingPractice({ lesson, onBack }: { lesson: Lesson; onBack: () => void
           </div>
         </div>
 
-        <div>
-          <MusicPlayer
-            enabled={musicEnabled}
-            onToggle={setMusicEnabled}
-            volume={volume}
-            onVolumeChange={setVolume}
-          />
-        </div>
       </div>
     </div>
   )
