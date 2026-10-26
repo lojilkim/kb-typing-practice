@@ -40,6 +40,16 @@ CREATE TABLE public.songs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Java code practice activities. Activity content is seeded by the code-practice migration.
+CREATE TABLE public.code_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  activity_number INTEGER UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  code TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- User songs progress
 CREATE TABLE public.user_songs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -90,6 +100,7 @@ CREATE TABLE public.practice_sessions (
   words_typed INTEGER NOT NULL,
   song_id UUID REFERENCES public.songs(id) ON DELETE SET NULL,
   lesson_id UUID REFERENCES public.lessons(id) ON DELETE SET NULL,
+  code_activity_id UUID REFERENCES public.code_activities(id) ON DELETE SET NULL,
   music_enabled BOOLEAN DEFAULT true,
   posture_reminders_acknowledged INTEGER DEFAULT 0,
   home_row_accuracy FLOAT,
@@ -101,8 +112,19 @@ CREATE TABLE public.practice_sessions (
   correct_keystrokes INTEGER DEFAULT 0,
   incorrect_keystrokes INTEGER DEFAULT 0,
   average_response_time FLOAT,
+  session_key TEXT,
+  raw_wpm INTEGER,
+  net_wpm INTEGER,
+  extra_characters INTEGER DEFAULT 0,
+  missed_characters INTEGER DEFAULT 0,
+  consistency FLOAT,
+  performance_samples JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS practice_sessions_user_session_key_idx
+  ON public.practice_sessions (user_id, session_key)
+  WHERE session_key IS NOT NULL;
 
 -- Achievements
 CREATE TABLE public.achievements (
@@ -187,6 +209,7 @@ CREATE TABLE public.practice_calendar (
 -- Enable Row Level Security
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.songs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.code_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_songs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.lessons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_lessons ENABLE ROW LEVEL SECURITY;
@@ -234,6 +257,9 @@ CREATE TRIGGER protect_user_role
 
 -- RLS Policies for songs (public read)
 CREATE POLICY "Anyone can view songs" ON public.songs
+  FOR SELECT USING (true);
+
+CREATE POLICY "Anyone can view code activities" ON public.code_activities
   FOR SELECT USING (true);
 
 -- RLS Policies for user_songs
@@ -346,6 +372,13 @@ CREATE TABLE public.assessment_results (
   total_characters INTEGER NOT NULL CHECK (total_characters >= 0),
   errors INTEGER NOT NULL CHECK (errors >= 0),
   completion_time INTEGER NOT NULL CHECK (completion_time >= 0),
+  net_wpm INTEGER,
+  raw_wpm INTEGER,
+  extra_characters INTEGER NOT NULL DEFAULT 0,
+  missed_characters INTEGER NOT NULL DEFAULT 0,
+  words_typed INTEGER NOT NULL DEFAULT 0,
+  consistency FLOAT,
+  performance_samples JSONB DEFAULT '[]'::jsonb,
   status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'abandoned')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, kind)

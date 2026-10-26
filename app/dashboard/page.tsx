@@ -169,11 +169,8 @@ export default function DashboardPage() {
       {assessments.pre && assessments.post && (
         <div className="card mb-8">
           <h2 className="text-xl font-bold mb-4">Pre-test vs Post-test</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div><p className="text-sm" style={{ color: "var(--text-muted)" }}>WPM improvement</p><p className="text-2xl font-bold">{assessments.post.wpm - assessments.pre.wpm >= 0 ? "+" : ""}{assessments.post.wpm - assessments.pre.wpm}</p></div>
-            <div><p className="text-sm" style={{ color: "var(--text-muted)" }}>Accuracy improvement</p><p className="text-2xl font-bold">{(assessments.post.accuracy - assessments.pre.accuracy).toFixed(2)}%</p></div>
-            <div><p className="text-sm" style={{ color: "var(--text-muted)" }}>Errors reduced</p><p className="text-2xl font-bold">{assessments.pre.errors - assessments.post.errors}</p></div>
-          </div>
+          <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>Spaces, indentation, line breaks, and Java punctuation are counted as characters in both tests.</p>
+          <div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b" style={{ borderColor: "var(--card-border)" }}><th className="p-2">Indicator</th><th className="p-2">PRE-TEST</th><th className="p-2">POST-TEST</th><th className="p-2">Difference</th><th className="p-2">Trend</th></tr></thead><tbody><ComparisonRow label="Net WPM" pre={assessments.pre.net_wpm ?? assessments.pre.wpm} post={assessments.post.net_wpm ?? assessments.post.wpm} /><ComparisonRow label="Raw WPM" pre={assessments.pre.raw_wpm ?? assessments.pre.wpm} post={assessments.post.raw_wpm ?? assessments.post.wpm} /><ComparisonRow label="Accuracy" pre={assessments.pre.accuracy} post={assessments.post.accuracy} suffix="%" /><ComparisonRow label="Typing errors" pre={assessments.pre.errors} post={assessments.post.errors} invert /><ComparisonRow label="Consistency" pre={assessments.pre.consistency} post={assessments.post.consistency} suffix="%" /></tbody></table></div>
         </div>
       )}
 
@@ -205,7 +202,7 @@ export default function DashboardPage() {
           <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
           <div className="space-y-3">
             <Link href="/songs" aria-disabled={!assessments.pre} className={`btn-primary w-full text-center block ${!assessments.pre ? "pointer-events-none opacity-50" : ""}`}>
-              🎵 Practice Songs
+              💻 Code Practice
             </Link>
             <Link href="/lessons" aria-disabled={!assessments.pre} className={`btn-secondary w-full text-center block ${!assessments.pre ? "pointer-events-none opacity-50" : ""}`}>
               ⌨️ Typing Lessons
@@ -218,4 +215,12 @@ export default function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function ComparisonRow({ label, pre, post, suffix = "", invert = false }: { label: string; pre: number | null | undefined; post: number | null | undefined; suffix?: string; invert?: boolean }) {
+  if (pre === null || pre === undefined || post === null || post === undefined) return <tr className="border-b" style={{ borderColor: "var(--card-border)" }}><td className="p-2">{label}</td><td className="p-2" colSpan={4} style={{ color: "var(--text-muted)" }}>Not enough measurements</td></tr>
+  const difference = post - pre
+  const improved = invert ? difference < 0 : difference > 0
+  const unchanged = difference === 0
+  return <tr className="border-b" style={{ borderColor: "var(--card-border)" }}><td className="p-2">{label}</td><td className="p-2">{pre}{suffix}</td><td className="p-2">{post}{suffix}</td><td className="p-2">{difference >= 0 ? "+" : ""}{difference.toFixed(suffix ? 1 : 0)}{suffix}</td><td className="p-2" style={{ color: unchanged ? "var(--text-muted)" : improved ? "var(--success)" : "var(--error)" }}>{unchanged ? "Unchanged" : improved ? "Improved" : "Decreased"}</td></tr>
 }

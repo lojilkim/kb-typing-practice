@@ -12,7 +12,7 @@ export async function GET() {
     // Get all practice sessions
     const { data: sessions } = await supabase
       .from('practice_sessions')
-      .select('*, song:songs(*), lesson:lessons(*)')
+      .select('*, song:songs(*), lesson:lessons(*), code_activity:code_activities(*)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: true })
 

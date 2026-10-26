@@ -5,8 +5,16 @@ export interface AssessmentResult {
   user_id?: string
   kind: AssessmentKind
   wpm: number
+  net_wpm?: number
+  raw_wpm?: number
   accuracy: number
   errors: number
+  correct_characters?: number
+  incorrect_characters?: number
+  extra_characters?: number
+  missed_characters?: number
+  consistency?: number | null
+  performance_samples?: Array<{ elapsedMs: number; wpm: number; errors: number }>
   duration: number
   words_typed: number
   created_at?: string
@@ -18,8 +26,32 @@ export interface AssessmentStatus {
   storage: "database" | "local"
 }
 
-export const assessmentText =
-  "Good typing comes from steady practice, correct posture, and accurate finger placement. In 2026, type each sentence carefully: keep a comfortable rhythm, watch the punctuation, and use the correct number row. Try to maintain 95% accuracy while typing commas, periods, colons, semicolons, apostrophes, and question marks. A focused student can improve speed from 25 WPM to 40 WPM with regular practice; small, accurate steps create lasting progress."
+export const assessmentText = [
+  "public class Main {",
+  "    public static void main(String[] args) {",
+  '        String name = "Student";',
+  "        int age = 17;",
+  "",
+  '        System.out.println("Welcome to Java!");',
+  '        System.out.println("My name is " + name);',
+  '        System.out.println("I am " + age + " years old.");',
+  "",
+  "        int a = 10;",
+  "        int b = 20;",
+  "        int sum = a + b;",
+  "",
+  '        System.out.println("First number: " + a);',
+  '        System.out.println("Second number: " + b);',
+  '        System.out.println("The sum is: " + sum);',
+  "",
+  "        if (sum > 20) {",
+  '            System.out.println("The sum is greater than 20.");',
+  "        } else {",
+  '            System.out.println("The sum is 20 or less.");',
+  "        }",
+  "    }",
+  "}",
+].join("\n")
 
 export const localAssessmentKey = "typemaster-assessments"
 

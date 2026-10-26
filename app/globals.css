@@ -224,3 +224,150 @@ body {
   background: rgba(108, 99, 255, 0.15);
   color: var(--primary);
 }
+
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.typing-shell,
+.results-shell {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.typing-toolbar,
+.results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.typing-context {
+  display: grid;
+  gap: 0.25rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.typing-context strong {
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+.typing-countdown {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 2.25rem;
+  font-weight: 700;
+  min-width: 4rem;
+  text-align: right;
+}
+
+.typing-countdown small { font-size: 0.85rem; margin-left: 0.15rem; }
+.typing-countdown-warning { color: var(--error); }
+
+.typing-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.typing-stat-strip > div,
+.result-detail {
+  border-left: 1px solid var(--card-border);
+  padding-left: 1rem;
+}
+
+.typing-stat-label,
+.result-detail span,
+.result-primary span,
+.result-primary small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.typing-stat-value { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 1.4rem; }
+
+.typing-main-card {
+  background: color-mix(in srgb, var(--card-bg) 78%, transparent);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  cursor: text;
+  min-height: 390px;
+  padding: clamp(1.5rem, 5vw, 4rem);
+  position: relative;
+}
+
+.typing-instruction { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 3rem; }
+
+.typing-passage {
+  color: color-mix(in srgb, var(--foreground) 25%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: clamp(1.25rem, 2.3vw, 1.7rem);
+  line-height: 1.9;
+  max-height: 245px;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.typing-passage span { transition: color 100ms ease, background-color 100ms ease; }
+.typing-passage .is-correct { color: var(--foreground); }
+.typing-passage .is-incorrect { background: rgba(255, 82, 82, 0.18); color: var(--error); text-decoration: underline; text-decoration-thickness: 2px; }
+.typing-passage .is-current { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); color: var(--background); }
+.typing-input-ghost { height: 1px; opacity: 0; position: absolute; width: 1px; }
+.typing-footer { border-top: 1px solid var(--card-border); color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 3rem; padding-top: 1rem; font-size: 0.78rem; }
+
+.results-heading h1 { font-size: clamp(1.8rem, 4vw, 3rem); margin: 0.25rem 0; }
+.results-heading p:not(.eyebrow) { color: var(--text-muted); }
+.results-duration { color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.results-hero-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem; }
+.result-primary { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.5rem; }
+.result-primary strong { color: var(--accent); display: block; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(3rem, 8vw, 5.5rem); line-height: 1; margin: 0.6rem 0; }
+.result-primary small { letter-spacing: normal; text-transform: none; }
+.performance-card, .character-summary { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; margin: 1rem 0; padding: 1.25rem; }
+.performance-heading { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+.performance-heading h2, .character-summary h2 { font-size: 1rem; font-weight: 700; }
+.performance-heading span { color: var(--text-muted); font-size: 0.75rem; }
+.graph-legend-speed, .graph-legend-errors { border-radius: 999px; display: inline-block; height: 7px; margin: 0 0.25rem 1px 0.7rem; width: 7px; }
+.graph-legend-speed { background: var(--accent); }
+.graph-legend-errors { background: var(--error); }
+.performance-card svg { height: 180px; overflow: visible; width: 100%; }
+.graph-axis { stroke: var(--card-border); stroke-width: 1; }
+.graph-speed { fill: none; stroke: var(--accent); stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
+.graph-errors { fill: none; stroke: var(--error); stroke-dasharray: 5 6; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.graph-point { fill: var(--accent); }
+.graph-empty { color: var(--text-muted); padding: 4rem 0; text-align: center; }
+.results-detail-grid, .character-summary > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.result-detail strong { display: block; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 1.4rem; margin-top: 0.35rem; }
+.character-summary { margin-top: 1rem; }
+.character-summary h2 { margin-bottom: 1rem; }
+.results-note, .typing-save-error { color: var(--text-muted); font-size: 0.8rem; margin: 1rem 0; }
+.typing-save-error { color: var(--error); }
+.results-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+.code-activity-best { border-top: 1px solid var(--card-border); color: var(--text-muted); display: grid; font-size: 0.75rem; gap: 0.35rem; margin-top: 1rem; padding-top: 0.85rem; }
+.code-activity-best strong { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; margin-left: 0.25rem; }
+
+@media (max-width: 640px) {
+  .typing-toolbar { align-items: flex-start; }
+  .typing-toolbar .btn-secondary { padding: 0.6rem 0.7rem; font-size: 0.75rem; }
+  .typing-context { text-align: left; }
+  .typing-countdown { font-size: 1.7rem; min-width: 2.5rem; }
+  .typing-stat-strip { gap: 0.4rem; }
+  .typing-stat-strip > div { padding-left: 0.5rem; }
+  .typing-stat-value { font-size: 1rem; }
+  .typing-main-card { min-height: 440px; padding: 1.25rem; }
+  .typing-instruction { margin-bottom: 2rem; }
+  .typing-footer { margin-top: 2rem; }
+  .results-heading { align-items: flex-start; }
+  .results-hero-grid, .results-detail-grid, .character-summary > div { grid-template-columns: repeat(2, 1fr); }
+}

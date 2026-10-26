@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSupabase, getUser } from "@/lib/supabase-helpers"
 import { assessmentText } from "@/lib/assessment"
+import { calculateSessionMetrics, PerformanceSample } from "@/lib/typing-session"
 
 const validKinds = new Set(["pre", "post"])
 
@@ -30,7 +31,8 @@ export async function POST(request: Request) {
   const kind = body.kind
   const typedText = typeof body.typedText === "string" ? body.typedText : ""
   const duration = typeof body.duration === "number" ? body.duration : 0
-  if (!validKinds.has(kind) || typedText.length < 10 || !Number.isFinite(duration) || duration <= 0) {
+  const samples = Array.isArray(body.samples) ? body.samples as PerformanceSample[] : []
+  if (!validKinds.has(kind) || typedText.length === 0 || !Number.isFinite(duration) || duration <= 0 || duration > 30) {
     return NextResponse.json({ error: "Invalid assessment result" }, { status: 400 })
   }
 
@@ -46,22 +48,24 @@ export async function POST(request: Request) {
     .maybeSingle()
   if (existing) return NextResponse.json({ error: "This assessment has already been completed" }, { status: 409 })
 
-  let correctCharacters = 0
-  for (let index = 0; index < typedText.length; index += 1) {
-    if (typedText[index] === assessmentText[index]) correctCharacters += 1
-  }
-  const incorrectCharacters = typedText.length - correctCharacters
-  const wordsTyped = typedText.trim().split(/\s+/).filter(Boolean).length
+  const metrics = calculateSessionMetrics(assessmentText, typedText, duration, samples)
   const result = {
     user_id: user.id,
     kind,
-    wpm: Math.round((wordsTyped / duration) * 60),
-    accuracy: Math.round((correctCharacters / Math.max(typedText.length, 1)) * 10000) / 100,
-    correct_characters: correctCharacters,
-    incorrect_characters: incorrectCharacters,
+    wpm: Math.round(metrics.netWpm),
+    net_wpm: Math.round(metrics.netWpm),
+    raw_wpm: Math.round(metrics.rawWpm),
+    accuracy: metrics.accuracy,
+    correct_characters: metrics.correctCharacters,
+    incorrect_characters: metrics.incorrectCharacters,
+    extra_characters: metrics.extraCharacters,
+    missed_characters: metrics.missedCharacters,
+    consistency: metrics.consistency,
     total_characters: typedText.length,
-    errors: incorrectCharacters,
-    completion_time: Math.round(duration),
+    errors: metrics.errors,
+    completion_time: metrics.duration,
+    words_typed: metrics.wordsTyped,
+    performance_samples: samples,
     status: "completed",
   }
   const { data, error } = await (await getSupabase())
