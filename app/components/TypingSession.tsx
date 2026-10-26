@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { calculateSessionMetrics, PerformanceSample, TYPING_SESSION_SECONDS, TypingSessionMetrics } from "@/lib/typing-session"
-import MusicPlayer from "./MusicPlayer"
 
 export interface TypingSessionTarget {
   kind: "lesson" | "song" | "code" | "assessment"
@@ -34,12 +33,6 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
   const [completed, setCompleted] = useState<CompletedSession | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
-  const [musicEnabled, setMusicEnabled] = useState(true)
-  const [volume, setVolume] = useState(() => {
-    if (typeof window === "undefined") return 70
-    const storedVolume = window.localStorage.getItem("volume")
-    return storedVolume ? Number(storedVolume) : 70
-  })
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typedTextRef = useRef("")
   const completionRef = useRef(false)
@@ -98,7 +91,7 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
           songId: target.kind === "song" ? target.id : undefined,
           lessonId: target.kind === "lesson" ? target.id : undefined,
           codeActivityId: target.kind === "code" ? target.id : undefined,
-          musicEnabled,
+          musicEnabled: true,
         }),
       })
       if (!response.ok) throw new Error((await response.json()).error || "Unable to save this session")
@@ -108,7 +101,7 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
     } finally {
       setSaving(false)
     }
-  }, [musicEnabled, target.assessmentKind, target.id, target.kind, target.text])
+  }, [target.assessmentKind, target.id, target.kind, target.text])
 
   useEffect(() => {
     if (startedAt && elapsedSeconds >= TYPING_SESSION_SECONDS && !completed) {
@@ -193,9 +186,6 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
         <div className="typing-footer"><span>{startedAt ? "Session active" : "Ready when you are"}</span><span>30 second session</span></div>
       </div>
 
-      {target.kind === "song" && target.audioUrl && (
-        <MusicPlayer enabled={musicEnabled} onToggle={setMusicEnabled} volume={volume} onVolumeChange={(next) => { setVolume(next); window.localStorage.setItem("volume", String(next)) }} audioUrl={target.audioUrl} title={target.title} artist={target.artist || ""} />
-      )}
     </div>
   )
 }
