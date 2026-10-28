@@ -189,10 +189,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // Songs are longer milestone activities, so reward them generously.
+    // Code and lesson practice award points toward the user's next level.
+    // Keep a minimum reward so a completed session always feels worthwhile.
     const sessionXp = songId
       ? Math.max(500, Math.floor(metrics.netWpm * (metrics.accuracy / 100) * 5))
-      : Math.floor(metrics.netWpm * (metrics.accuracy / 100))
+      : Math.max(10, Math.round(metrics.netWpm * (metrics.accuracy / 100) * 2))
     const newXp = user.xp + sessionXp
     const newLevel = Math.floor(newXp / 500) + 1
     const newTotalPracticeTime = user.total_practice_time + metrics.duration
@@ -215,6 +216,8 @@ export async function POST(request: Request) {
         best_accuracy: newBestAccuracy,
       })
       .eq('id', user.id)
+
+    let earnedAchievementXp = 0
 
     // Check achievements
     const { data: achievements } = await supabase.from('achievements').select('*')
@@ -265,8 +268,9 @@ export async function POST(request: Request) {
           user_id: user.id,
           achievement_id: achievement.id,
         })
-        const updatedXp = newXp + achievement.xp_reward
+        const updatedXp = newXp + earnedAchievementXp + achievement.xp_reward
         await supabase.from('users').update({ xp: updatedXp }).eq('id', user.id)
+        earnedAchievementXp += achievement.xp_reward
         earnedAchievements.push(achievement)
       }
     }
@@ -354,17 +358,23 @@ export async function POST(request: Request) {
           })
           const finalXp = (await supabase.from('users').select('xp').eq('id', user.id).single()).data?.xp || 0
           await supabase.from('users').update({ xp: finalXp + keyboardMaster.xp_reward }).eq('id', user.id)
+          earnedAchievementXp += keyboardMaster.xp_reward
           earnedAchievements.push(keyboardMaster)
         }
       }
     }
 
+    const totalXp = newXp + earnedAchievementXp
+    const totalLevel = Math.floor(totalXp / 500) + 1
+
     return NextResponse.json({
       practiceSession,
       earnedAchievements,
+      pointsEarned: sessionXp,
+      levelUp: totalLevel > user.level,
       user: {
-        xp: newXp,
-        level: newLevel,
+        xp: totalXp,
+        level: totalLevel,
         currentStreak: newStreak,
         bestWpm: newBestWpm,
         bestAccuracy: newBestAccuracy,

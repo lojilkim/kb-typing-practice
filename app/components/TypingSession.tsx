@@ -23,6 +23,9 @@ interface CompletedSession extends TypingSessionMetrics {
   samples: PerformanceSample[]
   completedAt: string
   saved: boolean
+  pointsEarned: number
+  level: number | null
+  levelUp: boolean
 }
 
 export default function TypingSession({ target, onBack }: TypingSessionProps) {
@@ -68,7 +71,7 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
     if (completionRef.current) return
     completionRef.current = true
     const metrics = calculateSessionMetrics(target.text, finalText, finalElapsedSeconds, finalSamples)
-    setCompleted({ ...metrics, samples: finalSamples, completedAt: new Date().toISOString(), saved: false })
+    setCompleted({ ...metrics, samples: finalSamples, completedAt: new Date().toISOString(), saved: false, pointsEarned: 0, level: null, levelUp: false })
     setSaving(true)
     setSaveError("")
 
@@ -94,8 +97,15 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
           musicEnabled: true,
         }),
       })
-      if (!response.ok) throw new Error((await response.json()).error || "Unable to save this session")
-      setCompleted((current) => current ? { ...current, saved: true } : current)
+      const savedSession = await response.json()
+      if (!response.ok) throw new Error(savedSession.error || "Unable to save this session")
+      setCompleted((current) => current ? {
+        ...current,
+        saved: true,
+        pointsEarned: target.kind === "code" || target.kind === "lesson" ? savedSession.pointsEarned || 0 : 0,
+        level: savedSession.user?.level ?? null,
+        levelUp: !!savedSession.levelUp,
+      } : current)
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Unable to save this session")
     } finally {
@@ -151,7 +161,7 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
   return (
     <div className="typing-shell">
       <div className="typing-toolbar">
-        <button className="btn-secondary" onClick={onBack}>Back to {target.kind === "song" ? "Songs" : target.kind === "assessment" ? "Dashboard" : target.kind === "code" ? "Code Practice" : "Lessons"}</button>
+        <button className="btn-secondary" onClick={onBack}>Exit</button>
         <div className="typing-context"><span>{target.kind === "song" ? "Song lyrics" : target.kind === "assessment" ? `${target.assessmentKind === "pre" ? "Pre" : "Post"}-test` : target.kind === "code" ? "Code practice" : "Typing lesson"}</span><strong>{target.title}</strong></div>
         <div className={`typing-countdown ${remainingSeconds <= 5 ? "typing-countdown-warning" : ""}`}>{Math.ceil(remainingSeconds)}<small>s</small></div>
       </div>
@@ -201,10 +211,11 @@ function ResultsView({ target, result, saving, saveError, onRestart, onBack }: {
       <div className="results-hero-grid"><div className="result-primary"><span>net wpm</span><strong>{Math.round(result.netWpm)}</strong><small>correct characters / 5 / elapsed minutes</small></div><div className="result-primary"><span>accuracy</span><strong>{result.accuracy}%</strong><small>{result.correctCharacters} correct of {result.correctCharacters + result.incorrectCharacters} typed</small></div></div>
       <PerformanceGraph samples={result.samples} />
       <div className="results-detail-grid"><ResultDetail label="raw wpm" value={Math.round(result.rawWpm)} /><ResultDetail label="errors" value={result.errors} /><ResultDetail label="consistency" value={result.consistency === null ? "Not enough data" : `${result.consistency}%`} /><ResultDetail label="status" value={saving ? "Saving..." : result.saved ? "Saved" : "Not saved"} /></div>
+      {(target.kind === "code" || target.kind === "lesson") && result.saved && <div className="card mt-5"><p className="eyebrow">Progress reward</p><h2 className="text-2xl font-bold">+{result.pointsEarned} points</h2><p style={{ color: "var(--text-muted)" }}>{result.levelUp ? `Level up! You are now Level ${result.level}.` : `Keep practicing to reach Level ${result.level ?? "the next"}.`}</p></div>}
       <div className="character-summary"><h2>Character summary</h2><div><ResultDetail label="correct" value={result.correctCharacters} /><ResultDetail label="incorrect" value={result.incorrectCharacters} /><ResultDetail label="extra" value={result.extraCharacters} /><ResultDetail label="missed" value={result.missedCharacters} /></div></div>
       {saveError && <p className="typing-save-error">{saveError}</p>}
       <p className="results-note">{new Date(result.completedAt).toLocaleString()} · {target.kind === "song" ? "Song lyrics" : target.kind === "assessment" ? `${target.assessmentKind === "pre" ? "PRE" : "POST"}-TEST` : target.kind === "code" ? "Code practice" : "Typing lesson"}</p>
-      <div className="results-actions">{target.kind !== "assessment" && <button className="btn-primary" onClick={onRestart}>Restart test</button>}<button className={target.kind === "assessment" ? "btn-primary" : "btn-secondary"} onClick={onBack}>{target.kind === "assessment" ? "Continue" : `Back to ${target.kind === "song" ? "Songs" : target.kind === "code" ? "Code Practice" : "Lessons"}`}</button></div>
+      <div className="results-actions">{target.kind !== "assessment" && <button className="btn-primary" onClick={onRestart}>Restart test</button>}<button className={target.kind === "assessment" ? "btn-primary" : "btn-secondary"} onClick={onBack}>Exit</button></div>
     </div>
   )
 }
