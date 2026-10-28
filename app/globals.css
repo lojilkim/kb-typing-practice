@@ -145,6 +145,20 @@ body {
   color: white;
 }
 
+.sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 999px;
+}
+
 .typing-correct {
   color: var(--success);
 }
