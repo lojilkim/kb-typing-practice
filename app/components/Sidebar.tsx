@@ -27,8 +27,8 @@ export default function Sidebar() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 p-4 flex flex-col" style={{ background: "var(--card-bg)", borderRight: "1px solid var(--card-border)" }}>
-      <div className="mb-8 px-2">
+    <aside className="sidebar-shell fixed left-0 top-0 h-full w-64 min-h-0 overflow-hidden overflow-x-hidden p-4 flex flex-col" style={{ background: "var(--card-bg)", borderRight: "1px solid var(--card-border)" }}>
+      <div className="mb-8 flex-shrink-0 px-2">
         <h1 className="text-2xl font-bold" style={{ color: "var(--primary)" }}>
           ⌨️ TypeMaster
         </h1>
@@ -38,7 +38,7 @@ export default function Sidebar() {
       </div>
 
       {profile && (
-        <div className="mb-6 p-3 rounded-lg" style={{ background: "var(--secondary)" }}>
+        <div className="mb-6 flex-shrink-0 p-3 rounded-lg" style={{ background: "var(--secondary)" }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg" style={{ background: "var(--primary)" }}>
               {(profile.username as string)?.[0]?.toUpperCase() || "U"}
@@ -64,15 +64,14 @@ export default function Sidebar() {
             <span className="font-medium">{item.label}</span>
           </Link>
         ))}
+        {profile?.role === "admin" && (
+          <Link href="/admin/assessments" className={`sidebar-link ${pathname.startsWith("/admin") ? "active" : ""}`}>
+            <span className="text-xl">🛡️</span><span className="font-medium">Admin results</span>
+          </Link>
+        )}
       </nav>
 
-      {profile?.role === "admin" && (
-        <Link href="/admin/assessments" className={`sidebar-link ${pathname.startsWith("/admin") ? "active" : ""}`}>
-          <span className="text-xl">🛡️</span><span className="font-medium">Admin results</span>
-        </Link>
-      )}
-
-      <div className="space-y-2">
+      <div className="flex-shrink-0 space-y-2 pt-3">
         <button
           onClick={toggleTheme}
           className="sidebar-link w-full"

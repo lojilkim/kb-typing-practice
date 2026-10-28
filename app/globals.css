@@ -48,6 +48,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  overflow-x: hidden;
   font-family: "Inter", Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -145,7 +146,16 @@ body {
   color: white;
 }
 
+.sidebar-shell {
+  box-sizing: border-box;
+  height: 100dvh;
+  max-height: 100vh;
+}
+
 .sidebar-nav {
+  overscroll-behavior: contain;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: var(--card-border) transparent;
 }
@@ -372,6 +382,17 @@ body {
 .code-activity-best strong { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; margin-left: 0.25rem; }
 
 @media (max-width: 640px) {
+  .sidebar-shell {
+    padding: 0.75rem;
+    width: min(16rem, 82vw);
+  }
+
+  main.ml-64 {
+    margin-left: min(16rem, 82vw) !important;
+    min-width: 0;
+    padding: 1rem !important;
+  }
+
   .typing-toolbar { align-items: flex-start; }
   .typing-toolbar .btn-secondary { padding: 0.6rem 0.7rem; font-size: 0.75rem; }
   .typing-context { text-align: left; }
