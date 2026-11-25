@@ -24,6 +24,7 @@ interface CompletedSession extends TypingSessionMetrics {
   completedAt: string
   saved: boolean
   pointsEarned: number
+  completionBonusEarned: boolean
   level: number | null
   levelUp: boolean
 }
@@ -71,7 +72,7 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
     if (completionRef.current) return
     completionRef.current = true
     const metrics = calculateSessionMetrics(target.text, finalText, finalElapsedSeconds, finalSamples)
-    setCompleted({ ...metrics, samples: finalSamples, completedAt: new Date().toISOString(), saved: false, pointsEarned: 0, level: null, levelUp: false })
+    setCompleted({ ...metrics, samples: finalSamples, completedAt: new Date().toISOString(), saved: false, pointsEarned: 0, completionBonusEarned: false, level: null, levelUp: false })
     setSaving(true)
     setSaveError("")
 
@@ -103,6 +104,7 @@ export default function TypingSession({ target, onBack }: TypingSessionProps) {
         ...current,
         saved: true,
         pointsEarned: target.kind === "code" || target.kind === "lesson" ? savedSession.pointsEarned || 0 : 0,
+        completionBonusEarned: !!savedSession.completionBonusEarned,
         level: savedSession.user?.level ?? null,
         levelUp: !!savedSession.levelUp,
       } : current)
@@ -211,7 +213,7 @@ function ResultsView({ target, result, saving, saveError, onRestart, onBack }: {
       <div className="results-hero-grid"><div className="result-primary"><span>net wpm</span><strong>{Math.round(result.netWpm)}</strong><small>correct characters / 5 / elapsed minutes</small></div><div className="result-primary"><span>accuracy</span><strong>{result.accuracy}%</strong><small>{result.correctCharacters} correct of {result.correctCharacters + result.incorrectCharacters} typed</small></div></div>
       <PerformanceGraph samples={result.samples} />
       <div className="results-detail-grid"><ResultDetail label="raw wpm" value={Math.round(result.rawWpm)} /><ResultDetail label="errors" value={result.errors} /><ResultDetail label="consistency" value={result.consistency === null ? "Not enough data" : `${result.consistency}%`} /><ResultDetail label="status" value={saving ? "Saving..." : result.saved ? "Saved" : "Not saved"} /></div>
-      {(target.kind === "code" || target.kind === "lesson") && result.saved && <div className="card mt-5"><p className="eyebrow">Progress reward</p><h2 className="text-2xl font-bold">+{result.pointsEarned} points</h2><p style={{ color: "var(--text-muted)" }}>{result.levelUp ? `Level up! You are now Level ${result.level}.` : `Keep practicing to reach Level ${result.level ?? "the next"}.`}</p></div>}
+      {(target.kind === "code" || target.kind === "lesson") && result.saved && <div className="card mt-5"><p className="eyebrow">Progress reward</p><h2 className="text-2xl font-bold">+{result.pointsEarned} points</h2><p style={{ color: "var(--text-muted)" }}>{result.completionBonusEarned ? "All code activities completed. Completion bonus included." : result.levelUp ? `Level up! You are now Level ${result.level}.` : `Keep practicing to reach Level ${result.level ?? "the next"}.`}</p></div>}
       <div className="character-summary"><h2>Character summary</h2><div><ResultDetail label="correct" value={result.correctCharacters} /><ResultDetail label="incorrect" value={result.incorrectCharacters} /><ResultDetail label="extra" value={result.extraCharacters} /><ResultDetail label="missed" value={result.missedCharacters} /></div></div>
       {saveError && <p className="typing-save-error">{saveError}</p>}
       <p className="results-note">{new Date(result.completedAt).toLocaleString()} · {target.kind === "song" ? "Song lyrics" : target.kind === "assessment" ? `${target.assessmentKind === "pre" ? "PRE" : "POST"}-TEST` : target.kind === "code" ? "Code practice" : "Typing lesson"}</p>

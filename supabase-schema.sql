@@ -457,6 +457,7 @@ INSERT INTO public.achievements (name, description, icon, xp_reward, condition) 
 ('100 WPM Club', 'Reach 100 words per minute', '⚡', 200, 'wpm_100'),
 ('7-Day Streak', 'Practice for 7 consecutive days', '🔥', 150, 'streak_7'),
 ('Keyboard Master', 'Complete all typing lessons', '⌨️', 300, 'all_lessons'),
+('Code Practice Complete', 'Complete all code practice activities', '💻', 300, 'all_code_activities'),
 ('Song Completion', 'Complete typing a full song', '🎵', 100, 'first_song'),
 ('Word Warrior', 'Type 10,000 words total', '⚔️', 250, 'words_10000'),
 ('Speed Demon', 'Reach 80 WPM', '🚀', 150, 'wpm_80'),

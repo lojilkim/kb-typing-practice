@@ -218,6 +218,8 @@ export async function POST(request: Request) {
       .eq('id', user.id)
 
     let earnedAchievementXp = 0
+    let completionBonusEarned = false
+    let completionBonusXp = 0
 
     // Check achievements
     const { data: achievements } = await supabase.from('achievements').select('*')
@@ -272,6 +274,29 @@ export async function POST(request: Request) {
         await supabase.from('users').update({ xp: updatedXp }).eq('id', user.id)
         earnedAchievementXp += achievement.xp_reward
         earnedAchievements.push(achievement)
+      }
+    }
+
+    // Award the code-practice completion bonus once all activities have been attempted.
+    if (codeActivityId) {
+      const [{ data: codeActivities }, { data: codeSessions }] = await Promise.all([
+        supabase.from('code_activities').select('id'),
+        supabase.from('practice_sessions').select('code_activity_id').eq('user_id', user.id).not('code_activity_id', 'is', null),
+      ])
+      const completedCodeActivities = new Set((codeSessions || []).map((session) => session.code_activity_id))
+      const allCodeActivitiesCompleted = (codeActivities || []).length > 0 && (codeActivities || []).every((activity) => completedCodeActivities.has(activity.id))
+      const codeMaster = (achievements || []).find((achievement) => achievement.condition === 'all_code_activities')
+
+      if (allCodeActivitiesCompleted && codeMaster && !existingAchievementIds.has(codeMaster.id)) {
+        await supabase.from('user_achievements').insert({
+          user_id: user.id,
+          achievement_id: codeMaster.id,
+        })
+        await supabase.from('users').update({ xp: newXp + earnedAchievementXp + codeMaster.xp_reward }).eq('id', user.id)
+        earnedAchievementXp += codeMaster.xp_reward
+        completionBonusEarned = true
+        completionBonusXp = codeMaster.xp_reward
+        earnedAchievements.push(codeMaster)
       }
     }
 
@@ -370,7 +395,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       practiceSession,
       earnedAchievements,
-      pointsEarned: sessionXp,
+      pointsEarned: sessionXp + completionBonusXp,
+      completionBonusEarned,
       levelUp: totalLevel > user.level,
       user: {
         xp: totalXp,
